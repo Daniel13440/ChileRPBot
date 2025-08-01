@@ -1,4 +1,3 @@
-
 import interactions
 import os
 import asyncio
@@ -6,6 +5,7 @@ from datetime import datetime
 from flask import Flask
 from threading import Thread
 
+# Servidor web para mantener el bot activo 24/7
 app = Flask('')
 
 @app.route('/')
@@ -13,15 +13,16 @@ def home():
     return "Bot activo"
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=3000)  # Cambié el puerto a 3000 para evitar conflictos
 
 def keep_alive():
     Thread(target=run).start()
 
-keep_alive()
+keep_alive()  # Inicia el servidor de Flask antes de iniciar el bot
 
 bot = interactions.Client(token=os.getenv("DISCORD_BOT_TOKEN"), intents=interactions.Intents.DEFAULT)
 
+# Variables globales mejoradas
 votos = 0
 votantes = set()
 servidor_activo = False
@@ -36,11 +37,11 @@ async def on_ready():
 @interactions.slash_command(name="apertura", description="Envía el anuncio de apertura del servidor")
 async def apertura(ctx):
     global votos, votantes, servidor_activo, hora_inicio
-
+    
     if servidor_activo:
         await ctx.send("❌ El servidor ya está activo. Usa `/cerrar` para cerrarlo primero.", ephemeral=True)
         return
-
+    
     votos = 0
     votantes.clear()
     hora_inicio = datetime.now()
@@ -58,7 +59,7 @@ async def apertura(ctx):
         timestamp=datetime.now()
     )
     embed.set_footer(text="Sistema de Votación", icon_url=bot.user.avatar_url)
-
+    
     content = "🔔 <@&1355756789081047214> **¡NUEVA VOTACIÓN DE APERTURA!**"
 
     button = interactions.Button(
@@ -99,7 +100,7 @@ async def boton_votar_response(ctx):
         timestamp=datetime.now()
     )
     new_embed.set_footer(text="Sistema de Votación", icon_url=bot.user.avatar_url)
-
+    
     content = "🔔 <@&1355756789081047214> **¡NUEVA VOTACIÓN DE APERTURA!**"
 
     button = interactions.Button(
@@ -115,7 +116,7 @@ async def boton_votar_response(ctx):
 
     if votos >= 5:
         servidor_activo = True
-
+        
         embed_actividad = interactions.Embed(
             title="🎉 ¡SERVIDOR ACTIVADO!",
             description=(
@@ -128,7 +129,7 @@ async def boton_votar_response(ctx):
             color=0x00FF00
         )
         embed_actividad.set_footer(text="¡Que tengan una excelente partida!", icon_url=bot.user.avatar_url)
-
+        
         await ctx.send(embeds=embed_actividad)
 
 @interactions.slash_command(name="estado", description="Muestra el estado actual del servidor")
@@ -155,25 +156,26 @@ async def estado(ctx):
             ),
             color=0xFF0000
         )
-
+    
     await ctx.send(embeds=embed, ephemeral=True)
 
 @interactions.slash_command(name="cerrar", description="Cierra el servidor activo (Solo administradores)")
 async def cerrar(ctx):
     global servidor_activo, votos, votantes
-
+    
+    # Verificar permisos de administrador
     if not ctx.author.guild_permissions.ADMINISTRATOR:
         await ctx.send("❌ Solo los administradores pueden cerrar el servidor.", ephemeral=True)
         return
-
+    
     if not servidor_activo:
         await ctx.send("❌ No hay ningún servidor activo para cerrar.", ephemeral=True)
         return
-
+    
     servidor_activo = False
     votos = 0
     votantes.clear()
-
+    
     embed = interactions.Embed(
         title="🔴 Servidor Cerrado",
         description=(
@@ -184,7 +186,7 @@ async def cerrar(ctx):
         color=0xFF0000,
         timestamp=datetime.now()
     )
-
+    
     await ctx.send(embeds=embed)
 
 @interactions.slash_command(name="info", description="Información sobre el bot")
@@ -207,9 +209,10 @@ async def info(ctx):
         timestamp=datetime.now()
     )
     embed.set_footer(text="Desarrollado con ❤️", icon_url=bot.user.avatar_url)
-
+    
     await ctx.send(embeds=embed, ephemeral=True)
 
+# Manejo de errores mejorado
 @interactions.listen()
 async def on_command_error(event):
     print(f"❌ Error en comando: {event.error}")
